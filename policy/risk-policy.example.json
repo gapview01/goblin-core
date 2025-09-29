@@ -1,0 +1,5 @@
+{
+  "blockNewPrograms": true,
+  "blockUnverifiedMints": true,
+  "maxTxPerRun": 4
+}

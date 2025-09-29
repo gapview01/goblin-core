@@ -1,0 +1,7 @@
+{
+  "chain": "solana",
+  "steps": [
+    { "verb": "balance", "params": { "account": "11111111111111111111111111111111" } },
+    { "verb": "wrap", "params": { "owner": "11111111111111111111111111111111", "amountLamports": 1000 } }
+  ]
+}

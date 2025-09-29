@@ -1,0 +1,6 @@
+{
+  "allowedPrograms": ["11111111111111111111111111111111"],
+  "allowedMints": [],
+  "maxSlippageBps": 50,
+  "maxApprovalMinutes": 10
+}

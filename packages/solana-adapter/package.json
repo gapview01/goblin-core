@@ -1,0 +1,20 @@
+{
+  "name": "@goblin/solana-adapter",
+  "version": "0.1.0",
+  "description": "Solana adapter for Goblin core actions.",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@goblin/core": "^0.1.0",
+    "@solana/web3.js": "^1.93.0"
+  }
+}
