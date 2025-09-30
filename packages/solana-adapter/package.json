@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@goblin/core": "^0.1.0",
+    "@solana/spl-token": "^0.4.6",
     "@solana/web3.js": "^1.93.0"
   }
 }

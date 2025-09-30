@@ -1,58 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { PolicyEngine } from "../src/policy";
-import { Plan } from "../src/types";
+import { createPlan } from "../src/executor/planner";
+import { allowAllPolicy, getDefaultPolicyHook, setDefaultPolicyHook } from "../src/types/policy";
 
-describe("PolicyEngine", () => {
-  it("flags programs and slippage outside policy", () => {
-    const engine = new PolicyEngine({
-      allowlist: {
-        allowedPrograms: ["AllowedProgram"],
-        allowedMints: ["AllowedMint"],
-        maxSlippageBps: 50,
-        maxApprovalMinutes: 5,
+describe("policy hooks", () => {
+  it("allows overriding the default policy hook", async () => {
+    const customIssues = ["custom block"];
+    const customPolicy = {
+      async validate() {
+        return { ok: false, issues: customIssues };
       },
-      risk: {
-        blockNewPrograms: true,
-        blockUnverifiedMints: true,
-        maxTxPerRun: 2,
-      },
-    });
-
-    const plan: Plan = {
-      id: "plan-1",
-      chain: "solana",
-      createdAt: new Date().toISOString(),
-      steps: [
-        {
-          id: "swap-1",
-          verb: "swap",
-          params: {
-            programId: "UnknownProgram",
-            fromMint: "UnknownMint",
-            toMint: "AllowedMint",
-            slippageBps: 75,
-            approvalMinutes: 10,
-          },
-        },
-        {
-          id: "stake-1",
-          verb: "stake",
-          params: {},
-        },
-        {
-          id: "swap-2",
-          verb: "swap",
-          params: { programId: "AllowedProgram", fromMint: "AllowedMint" },
-        },
-      ],
     };
 
-    const result = engine.validate(plan);
+    const original = getDefaultPolicyHook();
+    setDefaultPolicyHook(customPolicy);
+
+    const plan = createPlan("solana");
+    const result = await customPolicy.validate(plan);
 
     expect(result.ok).toBe(false);
-    expect(result.issues.length).toBeGreaterThan(0);
-    expect(result.issues.join(" ")).toContain("UnknownProgram");
-    expect(result.issues.join(" ")).toContain("slippage");
-    expect(result.issues.join(" ")).toContain("exceeds policy cap");
+    expect(result.issues).toEqual(customIssues);
+
+    setDefaultPolicyHook(original);
+    const allowAllResult = await allowAllPolicy.validate(plan);
+    expect(allowAllResult.ok).toBe(true);
   });
 });

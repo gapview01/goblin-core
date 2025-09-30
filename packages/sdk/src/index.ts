@@ -3,57 +3,68 @@ import {
   ExecutionResult,
   JsonFileReceiptStore,
   Plan,
-  Planner,
-  PolicyEngine,
   Preview,
+  Receipt,
   SimulationResult,
-  TaskSpec,
   WalletAdapter,
-  executePlan,
-  previewPlan as corePreview,
-  simulatePlan as coreSimulate,
+  createPlan as coreCreatePlan,
+  buildPreview,
+  runExecutionPipeline,
 } from "@goblin/core";
+import type { CreatePlanOptions } from "@goblin/core";
 
-export type { Chain, ExecutionResult, Plan, Preview, SimulationResult, Step, TaskSpec, Verb } from "@goblin/core";
+export type { Chain, Plan, Preview, Receipt, SimulationResult, Step, Verb } from "@goblin/core";
 
-export function createPlan(task: TaskSpec): Plan {
-  return Planner.createPlan(task);
+export interface PreviewPlanOptions {
+  adapter: Adapter;
+  plan: Plan;
 }
 
-export async function preview(
-  adapter: Adapter,
-  plan: Plan,
-  policy?: PolicyEngine,
-): Promise<Preview> {
-  return corePreview(adapter, plan, policy);
+export interface SimulatePlanOptions {
+  adapter: Adapter;
+  plan: Plan;
 }
 
-export async function simulate(
-  adapter: Adapter,
-  plan: Plan,
-  policy?: PolicyEngine,
-): Promise<SimulationResult> {
-  if (policy) {
-    const validation = policy.validate(plan);
-    if (!validation.ok) {
-      return {
-        ok: false,
-        messages: validation.issues,
-        txCount: 0,
-      };
-    }
-  }
-  return coreSimulate(adapter, plan);
+export interface ExecutePlanOptions {
+  adapter: Adapter;
+  plan: Plan;
+  wallet?: WalletAdapter;
 }
 
-export async function run(
-  adapter: Adapter,
-  plan: Plan,
-  wallet: WalletAdapter,
-  policy?: PolicyEngine,
-): Promise<ExecutionResult> {
+export function createPlan(chain: Plan["chain"], options?: CreatePlanOptions): Plan {
+  return coreCreatePlan(chain, options);
+}
+
+export async function previewPlan({ adapter, plan }: PreviewPlanOptions): Promise<Preview> {
+  const encoded = await adapter.encode(plan);
+  return buildPreview(plan, {
+    feeEstimateLamports: encoded.feeEstimateLamports,
+    adapterMetadata: adapter.getContractMetadata ? await adapter.getContractMetadata() : undefined,
+    encoded: encoded.encoded,
+  });
+}
+
+export async function simulatePlan({ adapter, plan }: SimulatePlanOptions): Promise<SimulationResult> {
+  const encoded = await adapter.encode(plan);
+  return adapter.simulate(encoded.encoded);
+}
+
+export async function executePlan({
+  adapter,
+  plan,
+  wallet,
+}: ExecutePlanOptions): Promise<ExecutionResult | { unsignedTxs: unknown[] }> {
   const store = new JsonFileReceiptStore();
-  return executePlan(adapter, plan, wallet, { policy, receiptStore: store });
+  const result = await runExecutionPipeline(adapter, plan, wallet, { receiptStore: store });
+  if (result.unsigned) {
+    return result.unsigned;
+  }
+  if (!result.execution) {
+    throw new Error("Adapter did not return execution result.");
+  }
+  return result.execution;
 }
 
-export { Planner, PolicyEngine };
+export async function listReceipts(store = new JsonFileReceiptStore()): Promise<Receipt[]> {
+  return store.list();
+}
