@@ -1,18 +1,33 @@
 # Goblin Core
 
-Goblin Core is a Solana-first, non-custodial toolkit for planning, previewing, simulating, and executing a curated set of airdrop eligibility actions. The project ships an SDK, a Solana adapter, and a CLI that work together to provide safe, policy-driven workflows with preview and simulation guardrails before any transaction is signed.
+Goblin Core is a public, Solana-first executor toolkit that turns curated presets into non-custodial workflows. It includes:
 
-## Features
+- ⚙️ A light planner that expands presets (such as `airdrop-lite`) into deterministic plan steps.
+- 👀 Plain-English previews and guardrail simulations before any transaction is signed.
+- 🪙 A Solana adapter that can either submit signed transactions (retail mode) or export **UNSIGNED** bundles (machine mode).
+- 📦 An SDK and CLI so retail users and automation partners can orchestrate Plan → Preview → Simulate → Execute → Receipt flows.
 
-- 🔒 **Non-custodial by design** – wallet integrations rely on injected signers; seed phrases are never requested or stored.
-- 🧠 **Planner & policy engine** – build plans from simple task specs and enforce allowlists, slippage caps, and risk policies.
-- 🧪 **Preview & simulate** – inspect planned steps and dry-run simulations before signing anything.
-- 🧾 **Receipts** – every execution stores human-readable JSON receipts under `.goblin/receipts`.
-- 🛠️ **CLI & SDK** – automate workflows or script them with TypeScript.
+The code in this repository never imports private Goblin services. Policy, prompts, and any proprietary orchestration plug in via documented interfaces.
 
-## Getting started
+## Non-custodial by design
 
-Prerequisites: Node.js 18+
+Goblin Core never requests seed phrases and never stores private keys. Retail integrations inject a signer (for example a locally stored devnet keypair), while machine integrations receive unsigned transaction bundles that must be signed elsewhere.
+
+## Repository layout
+
+```
+packages/
+  core/             # Types, planner, preview, simulator, executor, receipt store, utilities
+  solana-adapter/   # Public Solana adapter that encodes, simulates, and executes plans
+  sdk/              # High-level helpers that wrap the core pipeline
+  cli/              # `npx goblin …` commands for Plan → Preview → Simulate → Execute → Receipts
+policy/             # Example policy data (no private logic)
+examples/           # Sample presets and walkthrough assets
+```
+
+## Quick start
+
+Prerequisites: Node.js 20+
 
 ```bash
 npm install
@@ -20,37 +35,52 @@ npm run build
 npm test
 ```
 
-## CLI quick start
-
-The CLI is published as part of the workspace. You can run it locally via `npx`:
+### Create and inspect a plan
 
 ```bash
-npx goblin plan --task ./examples/simple-task.json --out plan.json
-npx goblin preview --plan plan.json --policy ./policy/allowlist.example.json
-npx goblin simulate --plan plan.json
-npx goblin run --plan plan.json --wallet mock
-npx goblin receipts --list
+# Create a plan using the built-in preset and persist it to plan.json
+npx goblin plan --preset airdrop-lite --chain solana --wallet <YOUR_SOL_ADDRESS> --out plan.json
+
+# Generate a preview (human-readable summary + risks)
+npx goblin preview --plan plan.json --cluster devnet
+
+# Run a simulation
+npx goblin simulate --plan plan.json --cluster devnet
 ```
 
-Each command prints a non-custodial warning. `run` will show the preview summary before execution and persist receipts.
+### Execute
 
-## Packages
+Retail execution requires injecting your own signer (for example a local Solana keypair file with devnet funds):
 
-- `@goblin/core` – core types, planner, policy engine, simulator utilities, executor, and receipt store.
-- `@goblin/solana-adapter` – Solana-specific encoding, simulation, and execution helpers backed by `@solana/web3.js`.
-- `@goblin/sdk` – ergonomic helpers around the core planning, simulation, and execution flows.
-- `@goblin/cli` – Commander-based CLI that orchestrates planning through receipts.
+```bash
+npx goblin execute --plan plan.json --cluster devnet --mode retail --keypair ~/.config/solana/devnet.json
+```
 
-## Development
+Machine integrations can export unsigned bundles instead:
 
-- `npm run lint` – run ESLint across the repo.
-- `npm run build` – compile all workspace packages.
-- `npm test` – execute the Vitest unit tests.
+```bash
+npx goblin execute --plan plan.json --cluster devnet --mode machine > unsigned.json
+```
 
-Pull requests and issues are welcome! Please review [CONTRIBUTING.md](./CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) before participating.
+Receipts are written under `.goblin/receipts/` after each successful execution.
 
-## License
+### List receipts
 
-Licensed under the [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE) for attribution.
+```bash
+npx goblin receipts --list
+npx goblin receipts --show <receipt-id>
+```
 
-Goblin Core is a community project. The Goblin name and logo may be reserved — see [TRADEMARKS.md](./TRADEMARKS.md) for details.
+## SDK usage
+
+See [API.md](./API.md) for end-to-end examples of the SDK entrypoints.
+
+## Testing
+
+- `npm run lint` – ESLint across the workspace
+- `npm run build` – compile the TypeScript sources
+- `npm test` – Vitest unit + integration tests (the Solana integration test uses a mocked connection and does not touch mainnet)
+
+## Contributing
+
+Review [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), and [SECURITY.md](./SECURITY.md) before opening a pull request. Goblin Core ships under the [Apache 2.0 license](./LICENSE); trademarks remain under [TRADEMARKS.md](./TRADEMARKS.md).

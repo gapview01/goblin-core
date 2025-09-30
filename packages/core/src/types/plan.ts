@@ -1,4 +1,4 @@
-export type Chain = "solana";
+export type Chain = "solana" | "evm";
 
 export type Verb =
   | "balance"
@@ -8,7 +8,8 @@ export type Verb =
   | "quote"
   | "swap"
   | "stake"
-  | "unstake";
+  | "unstake"
+  | "approve";
 
 export interface Step {
   id: string;
@@ -21,11 +22,11 @@ export interface Plan {
   chain: Chain;
   steps: Step[];
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Preview {
   planId: string;
-  chain: Chain;
   summary: string;
   risks: string[];
   feeEstimate?: string;
@@ -38,12 +39,6 @@ export interface SimulationResult {
   txCount: number;
 }
 
-export interface ExecutionResult {
-  ok: boolean;
-  txids: string[];
-  receipts: Receipt[];
-}
-
 export interface Receipt {
   id: string;
   planId: string;
@@ -51,21 +46,11 @@ export interface Receipt {
   steps: Step[];
   txids: string[];
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }
 
-export interface ValidationResult {
+export interface ExecutionResult {
   ok: boolean;
-  issues: string[];
-}
-
-export interface TaskStepInput {
-  id?: string;
-  verb: Verb;
-  params?: Record<string, unknown>;
-}
-
-export interface TaskSpec {
-  id?: string;
-  chain: Chain;
-  steps: TaskStepInput[];
+  txids: string[];
+  receipts: Receipt[];
 }
